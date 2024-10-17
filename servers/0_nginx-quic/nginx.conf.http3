@@ -1,0 +1,31 @@
+daemon off;
+
+user root;
+
+error_log /dev/stdout debug;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    access_log /dev/stdout;
+
+    ssl_certificate     /ssl_cert.pem;
+    ssl_certificate_key /ssl_key.pem;
+
+    ssl_protocols TLSv1.3;
+
+    server {
+        server_name localhost;
+        listen *:12345 ssl;
+        listen *:12345 reuseport http3;
+        location / {
+            root /www;
+            add_header Alt-Svc 'h3=":12345"';
+        }
+    }
+
+    include       mime.types;
+    default_type  application/octet-stream;
+}

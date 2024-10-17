@@ -1,0 +1,67 @@
+diff --git a/src/aioquic/quic/configuration.py b/src/aioquic/quic/configuration.py
+index 5dc9612..dab0de8 100644
+--- a/src/aioquic/quic/configuration.py
++++ b/src/aioquic/quic/configuration.py
+@@ -33,11 +33,17 @@ class QuicConfiguration:
+     Currently supported algorithms: `"reno", `"cubic"`.
+     """
+ 
+-    connection_id_length: int = 8
++    connection_id_length: int = 20
+     """
+     The length in bytes of local connection IDs.
+     """
+ 
++    init_dcid: Optional[bytes] = b"A" * connection_id_length
++    init_scid: Optional[bytes] = b"B" * connection_id_length
++    """
++    Inital connection IDs.
++    """
++
+     idle_timeout: float = 60.0
+     """
+     The idle timeout in seconds.
+@@ -114,8 +120,7 @@ class QuicConfiguration:
+     quantum_readiness_test: bool = False
+     supported_versions: List[int] = field(
+         default_factory=lambda: [
+-            QuicProtocolVersion.VERSION_1,
+-            QuicProtocolVersion.VERSION_2,
++            QuicProtocolVersion.VERSION_NEGOTIATION,
+         ]
+     )
+     verify_mode: Optional[int] = None
+diff --git a/src/aioquic/quic/connection.py b/src/aioquic/quic/connection.py
+index df8f4bb..c56e725 100644
+--- a/src/aioquic/quic/connection.py
++++ b/src/aioquic/quic/connection.py
+@@ -304,7 +304,7 @@ class QuicConnection:
+         self._handshake_confirmed = False
+         self._host_cids = [
+             QuicConnectionId(
+-                cid=os.urandom(configuration.connection_id_length),
++                cid=configuration.init_scid,
+                 sequence_number=0,
+                 stateless_reset_token=os.urandom(16) if not self._is_client else None,
+                 was_sent=True,
+@@ -340,7 +340,7 @@ class QuicConnection:
+         self._pacing_at: Optional[float] = None
+         self._packet_number = 0
+         self._peer_cid = QuicConnectionId(
+-            cid=os.urandom(configuration.connection_id_length), sequence_number=None
++            cid=configuration.init_dcid, sequence_number=None
+         )
+         self._peer_cid_available: List[QuicConnectionId] = []
+         self._peer_cid_sequence_numbers: Set[int] = set([0])
+diff --git a/src/aioquic/quic/packet.py b/src/aioquic/quic/packet.py
+index ce2b6c5..852964a 100644
+--- a/src/aioquic/quic/packet.py
++++ b/src/aioquic/quic/packet.py
+@@ -86,6 +86,7 @@ class QuicProtocolVersion(IntEnum):
+     NEGOTIATION = 0
+     VERSION_1 = 0x00000001
+     VERSION_2 = 0x6B3343CF
++    VERSION_NEGOTIATION = 0x13371337
+ 
+ 
+ @dataclass

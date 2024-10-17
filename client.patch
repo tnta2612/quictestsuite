@@ -1,0 +1,61 @@
+diff --git a/examples/http3_client.py b/examples/http3_client.py
+index 36bb420..adb08b2 100644
+--- a/examples/http3_client.py
++++ b/examples/http3_client.py
+@@ -538,7 +538,26 @@ if __name__ == "__main__":
+     parser.add_argument(
+         "--zero-rtt", action="store_true", help="try to send requests using 0-RTT"
+     )
+-
++    parser.add_argument(
++        "--server-name",
++        type=str,
++        help="set the server name for SNI (Server Name Indication)",
++    )
++    parser.add_argument(
++        "--token",
++        type=str,
++        help="specify the token as a byte string",
++    )
++    parser.add_argument(
++        "--init-scid",
++        type=str,
++        help="Initial Source Connection ID as a hex string (e.g., '48656c6c6f')."
++    )
++    parser.add_argument(
++        "--init-dcid",
++        type=str,
++        help="Initial Destination Connection ID as a hex string (e.g., '48656c6c6f')."
++    )
+     args = parser.parse_args()
+ 
+     logging.basicConfig(
+@@ -584,7 +603,14 @@ if __name__ == "__main__":
+                 configuration.session_ticket = pickle.load(fp)
+         except FileNotFoundError:
+             pass
+-
++    if args.server_name:
++        configuration.server_name = args.server_name
++    if args.token:
++        configuration.token = bytes.fromhex(args.token)
++    if args.init_scid:
++        configuration.init_scid = bytes.fromhex(args.init_scid)
++    if args.init_dcid:
++        configuration.init_dcid = bytes.fromhex(args.init_dcid)
+     # load SSL certificate and key
+     if args.certificate is not None:
+         configuration.load_cert_chain(args.certificate, args.private_key)
+diff --git a/src/aioquic/h0/connection.py b/src/aioquic/h0/connection.py
+index 73c349d..829388b 100644
+--- a/src/aioquic/h0/connection.py
++++ b/src/aioquic/h0/connection.py
+@@ -4,7 +4,7 @@ from aioquic.h3.events import DataReceived, H3Event, Headers, HeadersReceived
+ from aioquic.quic.connection import QuicConnection
+ from aioquic.quic.events import QuicEvent, StreamDataReceived
+ 
+-H0_ALPN = ["hq-interop"]
++H0_ALPN = ["hq-interop", "hq-29"]
+ 
+ 
+ class H0Connection:
